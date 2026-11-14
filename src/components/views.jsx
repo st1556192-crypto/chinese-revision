@@ -672,18 +672,23 @@ function PoetryDrill() {
       </div>
       <div className="flex items-center justify-between">
         <p>{begun ? `${drill.index + 1} / ${drill.items.length}` : `0 / ${drill.items.length}`}</p>
-        <div className="flex items-center gap-2">
-          <p className="font-serif text-2xl">{study.formatDrillTime(study.drillElapsed())}</p>
-          {begun ? <button type="button" className={drill.running ? ghost : hot} onClick={study.toggleDrillTimer}>{drill.running ? t("stopTimer") : t("startTimer")}</button> : null}
-        </div>
+        <p className="font-serif text-2xl">{study.formatDrillTime(study.drillElapsed())}</p>
       </div>
       <div className="grid place-items-center text-center font-serif text-4xl">
         {begun ? (() => {
           const prompt = poemDrillHint(item, drill);
+          const blank = prompt.showBlank ? (
+            <span
+              className="mb-1 inline-block h-0 shrink-0 border-b-2 border-ink"
+              style={{ width: `${prompt.blankChars}em` }}
+              aria-hidden="true"
+            />
+          ) : null;
           return (
-            <div className="flex w-full max-w-3xl flex-col items-stretch gap-8 px-4">
-              <p className="text-center font-serif text-4xl font-bold">{prompt.text}</p>
-              {prompt.showBlank ? <div className="mx-auto h-0 w-full max-w-2xl border-b-2 border-ink" aria-hidden="true" /> : null}
+            <div className="flex w-full max-w-4xl flex-nowrap items-end justify-center gap-4 px-4">
+              {prompt.blankSide === "left" ? blank : null}
+              <p className="shrink-0 font-serif text-4xl font-bold whitespace-nowrap">{prompt.text}</p>
+              {prompt.blankSide === "right" ? blank : null}
             </div>
           );
         })() : <button type="button" className="text-ink" onClick={study.beginPoetryDrill}><span className="font-serif text-8xl font-bold">{t("startTimer")}</span></button>}

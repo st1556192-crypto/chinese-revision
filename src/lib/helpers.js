@@ -133,12 +133,16 @@ export function stripPoemPunct(text) {
 
 export function poemDrillHint(item, drill) {
   const lines = poemDrillLines(item);
-  if (!lines.length) return { text: "", showBlank: false };
+  if (!lines.length) return { text: "", showBlank: false, blankChars: 4, blankSide: "right" };
   const side = drill?.hints?.[item.id];
   const idx = lines.length > 1 && (side === 0 || side === 1) ? side : 0;
+  const text = stripPoemPunct(lines[idx] || lines[0]);
   return {
-    text: stripPoemPunct(lines[idx] || lines[0]),
-    showBlank: lines.length > 1 && idx === 0
+    text,
+    showBlank: lines.length > 1,
+    // First half shown → blank on right; second half shown → blank on left.
+    blankSide: idx === 0 ? "right" : "left",
+    blankChars: Math.max(text.length, 4)
   };
 }
 
