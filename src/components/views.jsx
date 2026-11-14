@@ -34,7 +34,7 @@ function toneButton(tone) {
 export function Home() {
   const study = useStudy();
   const cards = [
-    { mark: "一", tone: "ink", title: t("reading"), blurb: `共 ${study.data.readings.length} 篇古文。先看作者背景與手法，再讀原文譯文，最後做理解題。`, actions: [["reading", t("openReading")], ["vocab", t("openVocab")]] },
+    { mark: "一", tone: "ink", title: t("reading"), blurb: `第一學期摘要 · 共 ${study.data.readings.length} 篇古文（《小石潭記》《岳陽樓記》《買柑者言》《閒情記趣》）。先看背景與手法，再讀原文譯文，最後做理解題。`, actions: [["reading", t("openReading")], ["vocab", t("openVocab")]] },
     { mark: "二", tone: "pine", title: t("idiom"), blurb: `共 ${study.data.idioms.length} 則成語。先溫習解釋，再做練習或測驗鞏固。`, actions: [["idiom", t("openIdiom")], ["practice", t("practice")], ["drill", t("drill")]] },
     { mark: "三", tone: "clay", title: t("culture"), blurb: `共 ${study.data.culture.length} 則常識。涵蓋宋元明清至現代作家、名著與文學流派。`, actions: [["culture", t("openCulture")]] },
     { mark: "四", tone: "cinnabar", title: t("poetry"), blurb: `共 ${study.data.poems.length} 首詩。先誦讀名句，再做測驗鞏固。`, actions: [["poetry", t("openPoetry")], ["poetry-drill", t("drill")]] }
@@ -773,6 +773,7 @@ function ReadingPanel({ immersive = false }) {
   return (
     <div className={`grid min-h-0 gap-3 ${immersive ? "h-full grid-rows-[auto_auto_auto_minmax(0,1fr)]" : ""}`}>
       <div>
+        <p className="text-sm tracking-widest text-gold">{t("readingTerm")} · {t("readingSummary")}</p>
         <h2 className="font-serif text-3xl font-bold tracking-widest">{t("reading")}</h2>
         <p className="text-soft">{t("readLead")}</p>
       </div>
