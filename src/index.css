@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif;
+  --font-serif: "Noto Serif TC", "PMingLiU", "Songti TC", serif;
+  --font-en: Newsreader, "Palatino Linotype", Palatino, serif;
+  --color-paper: #fbf7ef;
+  --color-desk: #efe6d6;
+  --color-ink: #1f1a17;
+  --color-soft: #5e564c;
+  --color-cinnabar: #c5362b;
+  --color-pine: #1f6b4a;
+  --color-gold: #9a6410;
+  --color-clay: #8a5a32;
+  --color-card: #fffdf8;
+  --color-navy: #2c4a6e;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--color-ink);
+  background: #fff;
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+html.study-lock,
+body.study-lock,
+body.study-lock #root {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
