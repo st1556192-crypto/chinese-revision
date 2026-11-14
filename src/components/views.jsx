@@ -11,7 +11,6 @@ import {
   isIdiom,
   isPoem,
   poemDrillHint,
-  poemDrillLines,
   poemVerseText,
   radicalOf,
   withDrillStop
@@ -476,10 +475,7 @@ function IdiomPractice() {
   return (
     <div className="grid h-full min-h-0 grid-rows-[auto_auto_auto_auto_minmax(0,1fr)_auto] gap-3">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-4xl font-bold">{t("practice")}</h2>
-          <p className="text-soft">{t("practiceLead")}</p>
-        </div>
+        <h2 className="font-serif text-4xl font-bold">{t("practice")}</h2>
         <button type="button" className={ghost} onClick={() => study.go("home")}>{t("backHome")}</button>
       </div>
       <div className="flex justify-between"><span className="text-gold">{t("learning")}</span><span>{practice.index + 1} / {practice.items.length}</span></div>
@@ -649,9 +645,7 @@ function PoetryDrill() {
             {drill.items.map((entry) => (
               <li key={entry.id} className="rounded-2xl border border-ink/10 bg-card px-4 py-3 text-center">
                 <p className="text-soft">{entry.dynastyT} · {entry.authorT} · 《{head(entry)}》</p>
-                <div className="mt-2 space-y-2 font-serif text-2xl font-bold">
-                  {poemDrillLines(entry).map((line) => <p key={line}>{line}</p>)}
-                </div>
+                <p className="mt-2 overflow-hidden font-serif text-2xl font-bold whitespace-nowrap">{poemVerseText(entry)}</p>
               </li>
             ))}
           </ul>
