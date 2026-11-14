@@ -218,6 +218,7 @@ export function createEngine(bump) {
 
   function go(view) {
     window.speechSynthesis?.cancel();
+    const prev = state.view;
     state.view = view;
     state.flipped = false;
     state.settingsOpen = false;
@@ -231,6 +232,8 @@ export function createEngine(bump) {
     if (view === "fix" && !state.fix) initFix();
     clampIndexes();
     render();
+    if (view !== "home" && prev === "home") history.pushState({ cr: true }, "");
+    else if (view === "home" && history.state?.cr) history.replaceState(null, "");
   }
 
   function listForView() {
@@ -657,7 +660,11 @@ export function createEngine(bump) {
 
   function mount() {
     const onKeyDown = (event) => onKey(event);
+    const onPopState = () => {
+      if (state.view !== "home") go("home");
+    };
     document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("popstate", onPopState);
     window.speechSynthesis?.getVoices();
     const offAuth = watchUser((user) => {
       const nextUid = user ? user.uid : "";
@@ -690,6 +697,7 @@ export function createEngine(bump) {
     });
     return () => {
       document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("popstate", onPopState);
       clearDrillTick();
       offAuth();
       if (mistakeUnsub) mistakeUnsub();
