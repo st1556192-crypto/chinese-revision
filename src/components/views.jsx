@@ -119,7 +119,7 @@ function MistakeBoard() {
 export function Shell({ children, deck = false, hideTop = false, hideSettings = false }) {
   const study = useStudy();
   return (
-    <main className={`mx-auto flex min-h-dvh w-[min(980px,calc(100%-28px))] flex-col border-l-[3px] border-cinnabar/70 bg-paper shadow-lg ${deck ? "h-dvh max-h-dvh w-[min(920px,calc(100%-16px))] overflow-hidden border-0 shadow-none" : "my-5 px-5 py-5"}`}>
+    <main className={`mx-auto flex min-h-dvh w-[min(980px,calc(100%-28px))] flex-col bg-paper shadow-lg ${deck ? "h-dvh max-h-dvh w-[min(920px,calc(100%-16px))] overflow-hidden shadow-none" : "my-5 px-5 py-5"}`}>
       {hideTop ? null : (
         <header className={`flex items-start justify-between gap-3 ${deck ? "border-b border-ink/10 px-4 py-2" : "sticky top-0 -mx-5 mb-5 border-b border-ink/10 bg-paper/95 px-5 py-4 backdrop-blur"}`}>
           <div className="flex items-center gap-3">
@@ -473,15 +473,15 @@ function IdiomPractice() {
     return { text: head(option), detail: withDrillStop(option.glossT), ok: id === q.answerId };
   });
   return (
-    <div className="grid h-full min-h-0 grid-rows-[auto_auto_auto_auto_minmax(0,1fr)_auto] gap-3">
+    <div className="grid h-full min-h-0 grid-rows-[auto_auto_auto_minmax(0,1fr)_auto] gap-3">
       <div className="flex items-start justify-between gap-3">
         <h2 className="font-serif text-4xl font-bold">{t("practice")}</h2>
         <button type="button" className={ghost} onClick={() => study.go("home")}>{t("backHome")}</button>
       </div>
       <div className="flex justify-between"><span className="text-gold">{t("learning")}</span><span>{practice.index + 1} / {practice.items.length}</span></div>
       <Bar value={Math.round(((practice.index + 1) / practice.items.length) * 100)} />
-      <p className="text-center font-serif text-2xl">{withDrillStop(item.glossT)}</p>
-      <div className="min-h-0 overflow-auto">
+      <div className="flex min-h-0 flex-col justify-center gap-4 overflow-auto">
+        <p className="text-center font-serif text-2xl">{withDrillStop(item.glossT)}</p>
         <Choices options={options} picked={practice.picked} onPick={study.pickPractice} />
       </div>
       <div className="flex gap-2">
@@ -500,26 +500,25 @@ function IdiomDrill() {
     const marked = Object.keys(drill.marked || {}).length;
     return (
       <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-serif text-5xl font-bold">{t("drillDone")}</h2>
-            <p className="mt-1 text-xl">{t("drillTime")} {study.formatDrillTime(drill.baseMs)} · {drill.items.length} 則成語</p>
-          </div>
-          <button type="button" className={ghost} onClick={() => study.go("home")}>{t("backHome")}</button>
+        <div className="text-center">
+          <h2 className="font-serif text-5xl font-bold">{t("drillDone")}</h2>
+          <p className="mt-1 text-xl">{t("drillTime")} {study.formatDrillTime(drill.baseMs)}</p>
         </div>
         <div className="min-h-0 overflow-auto">
-          <ul className="grid gap-3">
-            {drill.items.map((entry) => (
-              <li key={entry.id} className="rounded-2xl border border-ink/10 bg-card px-4 py-3 text-center">
-                <p className="font-serif text-3xl font-bold tracking-widest">{head(entry)}</p>
-                <div className="mx-auto mt-2 max-w-3xl font-serif text-lg text-soft">
-                  {drillGlossLines(entry.glossT).map((line) => <p key={line}>{line}</p>)}
-                </div>
-              </li>
-            ))}
-          </ul>
-          {marked ? <p className="mt-3 text-clay">{study.state.authUser ? t("mistakeCloud") : t("mistakeQueued")}</p> : null}
-          {marked && !study.state.authUser ? <button type="button" className={`${ghost} mt-2`} onClick={study.signIn}>{t("signIn")}</button> : null}
+          <div className="flex min-h-full flex-col justify-center py-2">
+            <ul className="grid gap-3">
+              {drill.items.map((entry) => (
+                <li key={entry.id} className="rounded-2xl border border-ink/10 bg-card px-4 py-3 text-center">
+                  <p className="font-serif text-3xl font-bold tracking-widest">{head(entry)}</p>
+                  <div className="mx-auto mt-2 max-w-3xl font-serif text-lg text-soft">
+                    {drillGlossLines(entry.glossT).map((line) => <p key={line}>{line}</p>)}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {marked ? <p className="mt-3 text-center text-clay">{study.state.authUser ? t("mistakeCloud") : t("mistakeQueued")}</p> : null}
+            {marked && !study.state.authUser ? <button type="button" className={`${ghost} mx-auto mt-2 block`} onClick={study.signIn}>{t("signIn")}</button> : null}
+          </div>
         </div>
         <div className="flex gap-3">
           <button type="button" className={`${ghost} min-h-12 px-5`} onClick={study.exitIdiomDrill}><span className="text-lg">{t("backIdiom")}</span></button>
@@ -538,10 +537,7 @@ function IdiomDrill() {
       </div>
       <div className="flex items-center justify-between gap-3">
         <p>{begun ? `${drill.index + 1} / ${drill.items.length}` : `0 / ${drill.items.length}`}</p>
-        <div className="flex items-center gap-2">
-          <p className="font-serif text-2xl">{elapsed}</p>
-          {begun ? <button type="button" className={drill.running ? ghost : hot} onClick={study.toggleDrillTimer}>{drill.running ? t("stopTimer") : t("startTimer")}</button> : null}
-        </div>
+        <p className="font-serif text-2xl">{elapsed}</p>
       </div>
       <Bar value={begun ? Math.round(((drill.index + 1) / drill.items.length) * 100) : 0} />
       <div className="grid min-h-0 place-items-center">
@@ -558,7 +554,6 @@ function IdiomDrill() {
         )}
       </div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className={ghost} onClick={study.exitIdiomDrill}>{t("backIdiom")}</button>
         <button type="button" className={`${hot} ml-auto`} disabled={!begun} onClick={() => study.stepIdiomDrill(1)}>{begun && drill.index + 1 === drill.items.length ? t("seeResult") : t("nextQ")}</button>
       </div>
     </div>
@@ -633,22 +628,21 @@ function PoetryDrill() {
   if (drill.done) {
     return (
       <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-serif text-5xl font-bold">{t("drillDone")}</h2>
-            <p className="mt-1 text-xl">{t("drillTime")} {study.formatDrillTime(drill.baseMs)} · {drill.items.length} 則名句</p>
-          </div>
-          <button type="button" className={ghost} onClick={() => study.go("home")}>{t("backHome")}</button>
+        <div className="text-center">
+          <h2 className="font-serif text-5xl font-bold">{t("drillDone")}</h2>
+          <p className="mt-1 text-xl">{t("drillTime")} {study.formatDrillTime(drill.baseMs)}</p>
         </div>
         <div className="min-h-0 overflow-auto">
-          <ul className="grid gap-3">
-            {drill.items.map((entry) => (
-              <li key={entry.id} className="rounded-2xl border border-ink/10 bg-card px-4 py-3 text-center">
-                <p className="text-soft">{entry.dynastyT} · {entry.authorT} · 《{head(entry)}》</p>
-                <p className="mt-2 overflow-hidden font-serif text-2xl font-bold whitespace-nowrap">{poemVerseText(entry)}</p>
-              </li>
-            ))}
-          </ul>
+          <div className="flex min-h-full flex-col justify-center py-2">
+            <ul className="grid gap-3">
+              {drill.items.map((entry) => (
+                <li key={entry.id} className="rounded-2xl border border-ink/10 bg-card px-4 py-3 text-center">
+                  <p className="text-soft">{entry.dynastyT} · {entry.authorT} · 《{head(entry)}》</p>
+                  <p className="mt-2 overflow-hidden font-serif text-2xl font-bold whitespace-nowrap">{poemVerseText(entry)}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
         <div className="flex gap-3">
           <button type="button" className={`${ghost} min-h-12 px-5`} onClick={study.exitPoetryDrill}><span className="text-lg">{t("backPoetry")}</span></button>
@@ -688,7 +682,6 @@ function PoetryDrill() {
         })() : <button type="button" className="text-ink" onClick={study.beginPoetryDrill}><span className="font-serif text-8xl font-bold">{t("startTimer")}</span></button>}
       </div>
       <div className="flex gap-2">
-        <button type="button" className={ghost} onClick={study.exitPoetryDrill}>{t("backPoetry")}</button>
         <button type="button" className={`${hot} ml-auto`} disabled={!begun} onClick={() => study.stepPoetryDrill(1)}>{begun && drill.index + 1 === drill.items.length ? t("seeResult") : t("nextQ")}</button>
       </div>
     </div>
@@ -899,7 +892,7 @@ export function ReadingPageView() {
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-paper text-ink">
       <div className="flex items-center justify-end px-4 py-3">
-        <button type="button" className={ghost} onClick={() => study.go("reading")}>{t("leave")}</button>
+        <button type="button" className={ghost} onClick={() => study.go("home")}>{t("leave")}</button>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden px-4 pb-4">
         <ReadingPanel immersive />

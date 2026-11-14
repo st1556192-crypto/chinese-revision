@@ -726,7 +726,7 @@ export function createEngine(bump) {
     nextPractice,
     exitPractice() {
       state.idiomPractice = null;
-      render();
+      go("home");
     },
     startIdiomDrill,
     beginIdiomDrill,
@@ -735,7 +735,7 @@ export function createEngine(bump) {
     exitIdiomDrill() {
       state.idiomDrill = null;
       clearDrillTick();
-      render();
+      go("home");
     },
     startPoetryDrill,
     beginPoetryDrill,
@@ -743,7 +743,7 @@ export function createEngine(bump) {
     exitPoetryDrill() {
       state.poetryDrill = null;
       clearDrillTick();
-      render();
+      go("home");
     },
     toggleDrillTimer,
     setTopic(topic) {

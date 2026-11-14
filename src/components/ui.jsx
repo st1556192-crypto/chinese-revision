@@ -34,13 +34,13 @@ export function Choices({ options, picked, onPick }) {
             type="button"
             disabled={revealed}
             onClick={() => onPick(index)}
-            className={`rounded-2xl border text-left ${hasDetail ? "grid min-h-[5.5rem] grid-rows-[1fr_auto_1fr] px-4" : "min-h-12 px-4 py-3"} ${tone}`}
+            className={`rounded-2xl border text-left ${hasDetail ? "grid min-h-[7rem] grid-rows-[1fr_auto_1fr] px-4 py-2" : "min-h-12 px-4 py-3"} ${tone}`}
           >
             {hasDetail ? <span aria-hidden="true" /> : null}
             <span className="block">
-              <span className="block font-semibold">{option.text}</span>
+              <span className="block font-serif text-3xl font-bold tracking-widest">{option.text}</span>
               {hasDetail && revealed ? (
-                <span className="mt-1 block text-sm leading-snug text-soft">
+                <span className="mt-1.5 block text-lg leading-snug text-soft">
                   {option.detail || "\u00a0"}
                 </span>
               ) : null}
