@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { t } from "../copy.js";
 import { useStudy } from "../study.jsx";
 import { Bar, Chip, Choices, SettingsDock, ghost, hot, linkBtn } from "./ui.jsx";
@@ -34,7 +34,7 @@ function toneButton(tone) {
 export function Home() {
   const study = useStudy();
   const cards = [
-    { mark: "一", tone: "ink", title: t("reading"), blurb: `共 ${study.data.readings.length} 篇短文。先讀課文，再做理解題；也可先溫習相關詞語。`, actions: [["reading", t("openReading")], ["vocab", t("openVocab")]] },
+    { mark: "一", tone: "ink", title: t("reading"), blurb: `共 ${study.data.readings.length} 篇古文。先看作者背景與手法，再讀原文譯文，最後做理解題。`, actions: [["reading", t("openReading")], ["vocab", t("openVocab")]] },
     { mark: "二", tone: "pine", title: t("idiom"), blurb: `共 ${study.data.idioms.length} 則成語。先溫習解釋，再做練習或測驗鞏固。`, actions: [["idiom", t("openIdiom")], ["practice", t("practice")], ["drill", t("drill")]] },
     { mark: "三", tone: "clay", title: t("culture"), blurb: `共 ${study.data.culture.length} 則常識。涵蓋宋元明清至現代作家、名著與文學流派。`, actions: [["culture", t("openCulture")]] },
     { mark: "四", tone: "cinnabar", title: t("poetry"), blurb: `共 ${study.data.poems.length} 首詩。先誦讀名句，再做測驗鞏固。`, actions: [["poetry", t("openPoetry")], ["poetry-drill", t("drill")]] }
@@ -758,25 +758,152 @@ export function FixView() {
   );
 }
 
-export function ReadingView() {
+function ReadingPanel({ immersive = false }) {
   const study = useStudy();
+  const list = study.data.readings;
+  const item = study.byId(list, study.state.readingId) || list[0];
+  const [tab, setTab] = useState("bg");
+  const bucket = study.state.reading[item.id] || { picks: {}, submitted: false, note: false };
+  const tabs = [
+    { id: "bg", label: t("readingBg") },
+    { id: "text", label: t("readingText") },
+    { id: "practice", label: t("readingPractice") }
+  ];
+
   return (
-    <div className="grid min-h-[50vh] place-items-center">
-      <button type="button" className={hot} onClick={() => study.go("reading-page")}>
-        <span className="text-lg">{t("openReadingPage")}</span>
-      </button>
+    <div className={`grid min-h-0 gap-3 ${immersive ? "h-full grid-rows-[auto_auto_auto_minmax(0,1fr)]" : ""}`}>
+      <div>
+        <h2 className="font-serif text-3xl font-bold tracking-widest">{t("reading")}</h2>
+        <p className="text-soft">{t("readLead")}</p>
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {list.map((row) => (
+          <button
+            key={row.id}
+            type="button"
+            className={`shrink-0 rounded-full border px-3 py-1 ${row.id === item.id ? "border-ink bg-ink text-paper" : "border-ink/15 bg-card"}`}
+            onClick={() => {
+              study.chooseReading(row.id);
+              setTab("bg");
+            }}
+          >
+            {row.t}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="text-sm tracking-widest text-gold">{item.dynastyT} · {item.authorT} · {item.tipT}</p>
+          <h3 className="font-serif text-3xl font-bold tracking-widest">{item.t}</h3>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((entry) => (
+            <Chip key={entry.id} on={tab === entry.id} onClick={() => setTab(entry.id)}>{entry.label}</Chip>
+          ))}
+        </div>
+      </div>
+      <div className={`min-h-0 overflow-auto rounded-3xl border border-ink/10 bg-card p-4 ${immersive ? "" : "max-h-[70vh]"}`}>
+        {tab === "bg" ? (
+          <div className="grid gap-4">
+            <ReadingBlock title={t("readingBio")} items={item.bioT} />
+            <ReadingBlock title={t("readingPoints")} items={item.pointsT} />
+            <ReadingBlock title={t("readingCraft")} items={item.craftT} />
+          </div>
+        ) : null}
+        {tab === "text" ? (
+          <div className="grid gap-3">
+            {(item.lines || []).map((line, index) => (
+              <article key={`${item.id}-${index}`} className="rounded-2xl border border-ink/10 bg-paper/70 px-4 py-3">
+                <p className="mb-1 text-xs tracking-widest text-soft">{t("readingOriginal")}</p>
+                <p className="font-serif text-xl leading-relaxed font-semibold">{line.t}</p>
+                <p className="mt-3 mb-1 text-xs tracking-widest text-soft">{t("readingGloss")}</p>
+                <p className="text-soft leading-relaxed">{line.glossT}</p>
+              </article>
+            ))}
+          </div>
+        ) : null}
+        {tab === "practice" ? (
+          <div className="grid gap-5">
+            {(item.questions || []).map((question, qIndex) => {
+              const picked = study.pickedAt(bucket.picks, qIndex);
+              const options = question.options.map((option, index) => ({
+                text: option.t || option,
+                ok: index === question.answer
+              }));
+              return (
+                <article key={`${item.id}-q${qIndex}`} className="rounded-2xl border border-ink/10 bg-paper/70 p-4">
+                  <p className="mb-3 font-serif text-xl">{qIndex + 1}. {question.t}</p>
+                  {bucket.submitted ? (
+                    <Choices options={options} picked={picked} onPick={() => {}} />
+                  ) : (
+                    <div className="grid gap-2">
+                      {options.map((option, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          className={`min-h-12 rounded-2xl border px-4 py-3 text-left ${Number(picked) === index ? "border-ink bg-ink/5" : "border-ink/15 bg-card hover:border-ink/40"}`}
+                          onClick={() => study.pickRead(item.id, qIndex, index)}
+                        >
+                          {option.text}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {bucket.submitted ? (
+                    <p className="mt-3 rounded-xl bg-[#f4efe2] p-3"><b>{t("explain")}</b> {question.whyT}</p>
+                  ) : null}
+                </article>
+              );
+            })}
+            <div className="flex flex-wrap gap-2">
+              {bucket.submitted ? (
+                <>
+                  <p className="w-full font-serif text-2xl">{bucket.score} / {(item.questions || []).length}</p>
+                  <button type="button" className={hot} onClick={() => study.redoReading(item.id)}>{t("redo")}</button>
+                </>
+              ) : (
+                <>
+                  {bucket.note ? <p className="w-full text-clay">{t("needAll")}</p> : null}
+                  <button type="button" className={hot} onClick={() => study.submitRead(item.id)}>{t("check")}</button>
+                </>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
+}
+
+function ReadingBlock({ title, items }) {
+  return (
+    <section className="rounded-2xl border border-ink/10 bg-paper/70 p-4">
+      <h4 className="mb-3 font-serif text-2xl tracking-widest text-cinnabar">{title}</h4>
+      <ul className="grid gap-2">
+        {(items || []).map((line) => (
+          <li key={line} className="relative pl-4 text-[1.05rem] leading-relaxed before:absolute before:top-2.5 before:left-0 before:size-1.5 before:rounded-full before:bg-cinnabar/70">
+            {line}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function ReadingView() {
+  return <ReadingPanel />;
 }
 
 export function ReadingPageView() {
   const study = useStudy();
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-white text-ink">
+    <div className="fixed inset-0 z-40 flex flex-col bg-paper text-ink">
       <div className="flex items-center justify-end px-4 py-3">
         <button type="button" className={ghost} onClick={() => study.go("reading")}>{t("leave")}</button>
       </div>
-      <div className="min-h-0 flex-1 bg-white" />
+      <div className="min-h-0 flex-1 overflow-hidden px-4 pb-4">
+        <ReadingPanel immersive />
+      </div>
     </div>
   );
 }
