@@ -73,3 +73,24 @@ export function watchMistakes(uid, callback) {
     callback(rows);
   }, () => callback(null));
 }
+
+export async function savePracticeSession(uid, session) {
+  await setDoc(doc(db, "users", uid, "practiceSessions", session.id), {
+    id: session.id,
+    number: session.number,
+    score: session.score,
+    total: session.total,
+    finishedAt: session.finishedAt,
+    title: session.title || "",
+    results: session.results || [],
+    createdAt: serverTimestamp()
+  }, { merge: true });
+}
+
+export function watchPracticeSessions(uid, callback) {
+  return onSnapshot(collection(db, "users", uid, "practiceSessions"), (snap) => {
+    const rows = snap.docs.map((item) => item.data());
+    rows.sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0));
+    callback(rows);
+  }, () => callback(null));
+}

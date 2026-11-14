@@ -83,7 +83,7 @@ export function Home() {
           </article>
         ))}
       </section>
-      {study.state.authUser ? <MistakeBoard /> : null}
+      <PracticeBoard />
       <footer className="relative mt-4 flex flex-wrap items-end justify-between gap-3 text-sm text-soft">
         <div>
           <p>{t("saved")}</p>
@@ -95,24 +95,84 @@ export function Home() {
   );
 }
 
-function MistakeBoard() {
+function formatPracticeTime(ms) {
+  if (!ms) return "";
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function practiceName(row) {
+  return (row.title || "").trim();
+}
+
+function renameSession(study, row) {
+  const next = window.prompt(t("renamePracticePrompt"), row.title || "");
+  if (next == null) return;
+  study.renamePracticeSession(row.id, next);
+}
+
+function PracticeBoard() {
   const study = useStudy();
-  const rows = study.state.mistakes || [];
+  const rows = [...(study.state.practiceSessions || [])].sort((a, b) => (a.number || 0) - (b.number || 0));
   return (
     <section className="relative mt-6 rounded-[20px] border border-ink/10 bg-card/90 p-5">
-      <h2 className="mb-2 font-serif text-2xl tracking-widest">{t("mistakesTitle")}</h2>
+      <h2 className="mb-2 font-serif text-2xl tracking-widest">{t("practiceLogTitle")}</h2>
       {rows.length ? (
         <ul>
           {rows.map((row) => (
-            <li key={row.idiomId} className="grid gap-0.5 border-t border-ink/10 py-2.5">
-              <button type="button" className="justify-self-start text-lg font-bold" onClick={() => study.openWord(row.idiomId)}>{row.text || row.idiomId}</button>
-              <span className="text-soft">{row.gloss}</span>
-              <span className="text-sm text-clay">練習 {row.practice || 0} · 測驗 {row.test || 0}</span>
+            <li key={row.id} className="flex items-stretch gap-2 border-t border-ink/10">
+              <button type="button" className="grid min-w-0 flex-1 gap-0.5 py-2.5 text-left hover:bg-ink/[0.03]" onClick={() => study.openPracticeSession(row.id)}>
+                <span className="truncate text-lg font-bold">{practiceName(row) || "\u00a0"}</span>
+                <span className="text-sm text-clay">{formatPracticeTime(row.finishedAt)}</span>
+                <span className="text-soft">{row.score} / {row.total}</span>
+              </button>
+              <button type="button" className={`${ghost} my-2 shrink-0 px-3 text-sm`} onClick={() => renameSession(study, row)}>{t("renamePractice")}</button>
             </li>
           ))}
         </ul>
-      ) : <p className="text-soft">{t("noMistakes")}</p>}
+      ) : <p className="text-soft">{t("noPractices")}</p>}
     </section>
+  );
+}
+
+export function PracticeReviewView() {
+  const study = useStudy();
+  const session = study.state.practiceReview;
+  if (!session) return null;
+  const results = session.results || [];
+  return (
+    <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-serif text-4xl font-bold">{practiceName(session) || "\u00a0"}</h2>
+          <p className="text-clay">{formatPracticeTime(session.finishedAt)}</p>
+          <p>{session.score} / {session.total}</p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button type="button" className={ghost} onClick={() => renameSession(study, session)}>{t("renamePractice")}</button>
+          <button type="button" className={ghost} onClick={() => study.go("home")}>{t("backHome")}</button>
+        </div>
+      </div>
+      <div className="overflow-auto">
+        {results.length ? (
+          <ul className="grid gap-3">
+            {results.map((row) => (
+              <li key={row.id} className={`rounded-2xl border px-4 py-3 text-left ${row.ok ? "border-pine bg-pine/10" : "border-cinnabar bg-cinnabar/10"}`}>
+                <p className="font-serif text-3xl font-bold tracking-widest">{row.text}</p>
+                <p className="mt-1.5 font-serif text-lg leading-snug">{withDrillStop(row.gloss)}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-soft">{t("noPracticeDetail")}</p>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <button type="button" className={ghost} onClick={() => study.go("home")}>{t("backHome")}</button>
+      </div>
+    </div>
   );
 }
 
@@ -450,10 +510,12 @@ function IdiomPractice() {
         </div>
         <div className="overflow-auto">
           <ul className="grid gap-3">
-            {practice.items.map((q) => {
+            {practice.items.map((q, index) => {
               const item = study.byId(study.data.idioms, q.id);
+              const picked = practice.answers?.[index];
+              const ok = picked != null && q.optionIds[picked] === q.answerId;
               return (
-                <li key={q.id} className="rounded-2xl border border-ink/10 bg-card px-4 py-3 text-left">
+                <li key={q.id} className={`rounded-2xl border px-4 py-3 text-left ${ok ? "border-pine bg-pine/10" : "border-cinnabar bg-cinnabar/10"}`}>
                   <p className="font-serif text-3xl font-bold tracking-widest">{head(item)}</p>
                   <p className="mt-1.5 font-serif text-lg leading-snug">{withDrillStop(item.glossT)}</p>
                 </li>
@@ -483,7 +545,7 @@ function IdiomPractice() {
         <button type="button" className={ghost} onClick={() => study.go("home")}>{t("backHome")}</button>
       </div>
       <div className="flex justify-between"><span className="text-gold">{t("learning")}</span><span>{practice.index + 1} / {practice.items.length}</span></div>
-      <Bar value={Math.round(((practice.index + 1) / practice.items.length) * 100)} />
+      <Bar value={Math.round(((practice.index + (practice.picked != null ? 1 : 0)) / practice.items.length) * 100)} />
       <div className="flex min-h-0 flex-col justify-center gap-4 overflow-auto">
         <p className="text-center font-serif text-2xl">{withDrillStop(item.glossT)}</p>
         <Choices options={options} picked={practice.picked} onPick={study.pickPractice} />

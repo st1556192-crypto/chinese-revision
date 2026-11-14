@@ -74,7 +74,9 @@ export function defaultProgress() {
     fixTotal: 0,
     codeMode: "cangjie",
     cangjieColor: "multi",
-    pendingMistakes: []
+    pendingMistakes: [],
+    practiceSessions: [],
+    pendingSessions: []
   };
 }
 
@@ -90,7 +92,9 @@ export function loadProgress() {
       seen: data.seen || {},
       quizzes: data.quizzes || [],
       readings: data.readings || {},
-      pendingMistakes: data.pendingMistakes || []
+      pendingMistakes: data.pendingMistakes || [],
+      practiceSessions: data.practiceSessions || [],
+      pendingSessions: data.pendingSessions || []
     };
   } catch (err) {
     return base;

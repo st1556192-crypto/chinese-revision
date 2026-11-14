@@ -1,4 +1,4 @@
-import { googleSignIn, googleSignOut, saveMistake, watchMistakes, watchUser } from "../firebase.js";
+import { googleSignIn, googleSignOut, saveMistake, savePracticeSession, watchPracticeSessions, watchUser } from "../firebase.js";
 import { t } from "../copy.js";
 import {
   DATA,
@@ -45,10 +45,12 @@ export function createEngine(bump) {
     poetryDrill: null,
     authUser: null,
     mistakes: [],
+    practiceSessions: progress.practiceSessions || [],
+    practiceReview: null,
     authError: "",
     now: Date.now()
   };
-  let mistakeUnsub = null;
+  let sessionUnsub = null;
   let drillTimer = null;
 
   function render() {
@@ -189,20 +191,117 @@ export function createEngine(bump) {
     });
   }
 
-  async function flushPending(uid) {
-    const pending = progress.pendingMistakes || [];
-    if (!pending.length) return;
-    progress.pendingMistakes = [];
-    save();
-    const failed = [];
-    for (const mistake of pending) {
-      const ok = await pushMistake(uid, mistake);
-      if (!ok) failed.push(mistake);
+  async function pushSession(uid, session) {
+    try {
+      await savePracticeSession(uid, session);
+      return true;
+    } catch (err) {
+      return false;
     }
-    if (failed.length) {
-      progress.pendingMistakes = failed.concat(progress.pendingMistakes || []);
+  }
+
+  function nextPracticeNumber() {
+    const local = progress.practiceSessions || [];
+    const cloud = state.practiceSessions || [];
+    const pending = progress.pendingSessions || [];
+    return Math.max(0, ...local.map((row) => row.number || 0), ...cloud.map((row) => row.number || 0), ...pending.map((row) => row.number || 0)) + 1;
+  }
+
+  function rememberSession(session) {
+    progress.practiceSessions = progress.practiceSessions || [];
+    progress.practiceSessions = [session, ...progress.practiceSessions.filter((row) => row.id !== session.id)];
+    state.practiceSessions = [session, ...(state.practiceSessions || []).filter((row) => row.id !== session.id)];
+    save();
+  }
+
+  function mergePracticeSessions(cloudRows) {
+    const localRows = progress.practiceSessions || [];
+    const localById = new Map(localRows.map((row) => [row.id, row]));
+    const merged = (cloudRows || []).map((row) => {
+      const local = localById.get(row.id);
+      const cloudResults = row.results || [];
+      const localResults = local?.results || [];
+      const title = (row.title || "").trim() || (local?.title || "").trim();
+      const next = { ...row, title, results: cloudResults.length ? cloudResults : localResults };
+      if (state.authUser && local && ((localResults.length && !cloudResults.length) || ((local.title || "").trim() && !(row.title || "").trim()))) {
+        pushSession(state.authUser.uid, next);
+      }
+      return next;
+    });
+    for (const local of localRows) {
+      if (!merged.some((row) => row.id === local.id)) merged.push(local);
+    }
+    merged.sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0) || (a.number || 0) - (b.number || 0));
+    return merged;
+  }
+
+  function recordPracticeSession(practice) {
+    const results = practice.items.map((q, index) => {
+      const item = byId(DATA.idioms, q.id);
+      const picked = practice.answers?.[index];
+      const ok = picked != null && q.optionIds[picked] === q.answerId;
+      return {
+        id: q.id,
+        text: head(item),
+        gloss: item?.glossT || "",
+        ok
+      };
+    });
+    const session = {
+      id: `p${Date.now()}`,
+      number: nextPracticeNumber(),
+      score: practice.score || 0,
+      total: practice.items.length,
+      finishedAt: Date.now(),
+      title: "",
+      results
+    };
+    rememberSession(session);
+    if (!state.authUser) {
+      progress.pendingSessions = progress.pendingSessions || [];
+      progress.pendingSessions.push(session);
       save();
-      state.authError = "部分錯題暫時未能上傳。";
+      return;
+    }
+    pushSession(state.authUser.uid, session).then((ok) => {
+      if (!ok) {
+        progress.pendingSessions = progress.pendingSessions || [];
+        progress.pendingSessions.push(session);
+        save();
+      }
+    });
+  }
+
+  async function flushPending(uid) {
+    const pendingMistakes = progress.pendingMistakes || [];
+    if (pendingMistakes.length) {
+      progress.pendingMistakes = [];
+      save();
+      const failedMistakes = [];
+      for (const mistake of pendingMistakes) {
+        const ok = await pushMistake(uid, mistake);
+        if (!ok) failedMistakes.push(mistake);
+      }
+      if (failedMistakes.length) {
+        progress.pendingMistakes = failedMistakes.concat(progress.pendingMistakes || []);
+        save();
+        state.authError = "部分錯題暫時未能上傳。";
+        if (state.view === "home") render();
+      }
+    }
+    const pendingSessions = progress.pendingSessions || [];
+    if (!pendingSessions.length) return;
+    progress.pendingSessions = [];
+    save();
+    const failedSessions = [];
+    for (const session of pendingSessions) {
+      const ok = await pushSession(uid, session);
+      if (!ok) failedSessions.push(session);
+    }
+    if (failedSessions.length) {
+      progress.pendingSessions = failedSessions.concat(progress.pendingSessions || []);
+      save();
+      state.authError = "部分練習紀錄暫時未能上傳。";
       if (state.view === "home") render();
     }
   }
@@ -227,6 +326,7 @@ export function createEngine(bump) {
       state.idiomDrill = null;
     }
     if (view !== "poetry") state.poetryDrill = null;
+    if (view !== "practice-review") state.practiceReview = null;
     clearDrillTick();
     if (view === "quiz" && !state.quiz) state.quiz = makeQuiz();
     if (view === "fix" && !state.fix) initFix();
@@ -343,6 +443,7 @@ export function createEngine(bump) {
     if (practice.index + 1 >= practice.items.length) {
       practice.done = true;
       touchStreak();
+      recordPracticeSession(practice);
       save();
     } else {
       practice.index += 1;
@@ -668,7 +769,7 @@ export function createEngine(bump) {
     window.speechSynthesis?.getVoices();
     const offAuth = watchUser((user) => {
       const nextUid = user ? user.uid : "";
-      if (nextUid && nextUid === state.authUser?.uid && mistakeUnsub) {
+      if (nextUid && nextUid === state.authUser?.uid && sessionUnsub) {
         const photoURL = user.photoURL || "";
         if (photoURL !== (state.authUser.photoURL || "")) {
           state.authUser.photoURL = photoURL;
@@ -676,21 +777,27 @@ export function createEngine(bump) {
         }
         return;
       }
-      if (!nextUid && !state.authUser && !mistakeUnsub) return;
-      if (mistakeUnsub) {
-        mistakeUnsub();
-        mistakeUnsub = null;
+      if (!nextUid && !state.authUser && !sessionUnsub) return;
+      if (sessionUnsub) {
+        sessionUnsub();
+        sessionUnsub = null;
       }
       state.authUser = user
         ? { uid: user.uid, displayName: user.displayName || "", email: user.email || "", photoURL: user.photoURL || "" }
         : null;
       state.mistakes = [];
+      state.practiceSessions = progress.practiceSessions || [];
       if (user) {
         flushPending(user.uid);
-        mistakeUnsub = watchMistakes(user.uid, (rows) => {
-          if (!rows) state.authError = "未能讀取錯題。請在 Firebase 發布 Firestore 規則。";
-          else state.mistakes = rows;
-          if (state.view === "home") render();
+        sessionUnsub = watchPracticeSessions(user.uid, (rows) => {
+          if (!rows) state.authError = "未能讀取練習紀錄。請在 Firebase 發布 Firestore 規則。";
+          else {
+            const merged = mergePracticeSessions(rows);
+            state.practiceSessions = merged;
+            progress.practiceSessions = merged;
+            save();
+          }
+          if (state.view === "home" || state.view === "practice-review") render();
         });
       }
       render();
@@ -700,7 +807,7 @@ export function createEngine(bump) {
       window.removeEventListener("popstate", onPopState);
       clearDrillTick();
       offAuth();
-      if (mistakeUnsub) mistakeUnsub();
+      if (sessionUnsub) sessionUnsub();
     };
   }
 
@@ -791,6 +898,25 @@ export function createEngine(bump) {
         state.idiomIndex = Math.max(0, idx);
       }
       clearDrillTick();
+      render();
+    },
+    openPracticeSession(id) {
+      const session = (state.practiceSessions || []).find((row) => row.id === id)
+        || (progress.practiceSessions || []).find((row) => row.id === id);
+      if (!session) return;
+      go("practice-review");
+      state.practiceReview = session;
+      render();
+    },
+    renamePracticeSession(id, title) {
+      const name = String(title || "").trim();
+      const patch = (row) => (row.id === id ? { ...row, title: name } : row);
+      progress.practiceSessions = (progress.practiceSessions || []).map(patch);
+      state.practiceSessions = (state.practiceSessions || []).map(patch);
+      if (state.practiceReview?.id === id) state.practiceReview = { ...state.practiceReview, title: name };
+      save();
+      const session = (state.practiceSessions || []).find((row) => row.id === id);
+      if (session && state.authUser) pushSession(state.authUser.uid, session);
       render();
     },
     pickGrammar(id, choice) {
@@ -931,6 +1057,7 @@ export function createEngine(bump) {
       state.grammarPicks = {};
       state.culturePicks = {};
       state.poetryPicks = {};
+      state.practiceSessions = [];
       save();
       go("home");
     },
