@@ -449,11 +449,15 @@ function IdiomPractice() {
           <button type="button" className={ghost} onClick={() => study.go("home")}>{t("backHome")}</button>
         </div>
         <div className="overflow-auto">
-          <ul className="grid gap-2">
-            {practice.items.map((q, index) => {
+          <ul className="grid gap-3">
+            {practice.items.map((q) => {
               const item = study.byId(study.data.idioms, q.id);
-              const ok = practice.answers?.[index] != null && q.optionIds[practice.answers[index]] === q.answerId;
-              return <li key={q.id} className={`rounded-2xl p-3 ${ok ? "bg-pine/10" : "bg-cinnabar/10"}`}><b>{head(item)}</b><span className="mt-1 block text-soft">{item.glossT}</span></li>;
+              return (
+                <li key={q.id} className="rounded-2xl border border-ink/10 bg-card px-4 py-3 text-left">
+                  <p className="font-serif text-3xl font-bold tracking-widest">{head(item)}</p>
+                  <p className="mt-1.5 font-serif text-lg leading-snug">{withDrillStop(item.glossT)}</p>
+                </li>
+              );
             })}
           </ul>
           {missed ? <p className="mt-3 text-clay">{study.state.authUser ? t("mistakeCloud") : t("mistakeQueued")}</p> : null}
@@ -508,9 +512,9 @@ function IdiomDrill() {
           <div className="flex min-h-full flex-col justify-center py-2">
             <ul className="grid gap-3">
               {drill.items.map((entry) => (
-                <li key={entry.id} className="rounded-2xl border border-ink/10 bg-card px-4 py-3 text-center">
+                <li key={entry.id} className="rounded-2xl border border-ink/10 bg-card px-4 py-3 text-left">
                   <p className="font-serif text-3xl font-bold tracking-widest">{head(entry)}</p>
-                  <div className="mx-auto mt-2 max-w-3xl font-serif text-lg text-soft">
+                  <div className="mt-1.5 font-serif text-lg leading-snug">
                     {drillGlossLines(entry.glossT).map((line) => <p key={line}>{line}</p>)}
                   </div>
                 </li>
